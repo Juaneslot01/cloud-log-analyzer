@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package ingestor;
+
+// Esto genera el codigo en la carpeta correspondiente
+option go_package = "github.com/juaneslot01/cloud-log-anayzer/api/proto";
+
+// El servicio que recibira los logs
+service LogService {
+  rpc SendLog (LogRequest) returns (LogResponse);
+}
+
+// Estructura de un log
+message LogRequest {
+  string service_name = 1;
+  string level = 2;
+  string message = 3;
+  string timestamp = 4;
+}
+
+// Respuesta del servidor
+message LogResponse {
+  bool success = 1;
+  string message = 2;
+}
