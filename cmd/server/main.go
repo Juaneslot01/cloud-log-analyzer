@@ -24,6 +24,7 @@ func main() {
 	s3Client := s3.NewFromConfig(cfg)
 	bucketName := os.Getenv("S3_BUCKET_NAME")
 	if bucketName == "" {
+		log.Println("Advertencia: S3_BUCKET_NAME no definida, usando default")
 		bucketName = "juanes-logs-bucket"
 	}
 
