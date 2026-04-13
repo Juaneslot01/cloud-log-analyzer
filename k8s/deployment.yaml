@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-log-analyzer
+  labels:
+    app: cloud-log-analyzer
+
+spec:
+  replicas: 2 # Two instances for high availability
+  selector:
+    matchLabels:
+      app: cloud-log-analyzer
+  template:
+    metadata:
+      labels:
+        app: cloud-log-analyzer
+    spec:
+      imagePullSecrets:
+        - name: ecr-helper
+      containers:
+        - name: analyzer
+          image: 785894519798.dkr.ecr.us-east-2.amazonaws.com/cloud-log-analyzer:aa4e8c20e26e114c639e4de561c0a500af852969
+          ports:
+            - containerPort: 50051
+          env:
+            - name: S3_BUCKET_NAME
+              value: "juanes-cloud-logs-95057e98"
+            - name: AWS_REGION
+              value: "us-east-2"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-creds
+                  key: access_key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-creds
+                  key: secret_key
+            - name: APP_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-creds
+                  key: api_key

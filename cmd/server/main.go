@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -21,7 +22,10 @@ func main() {
 	}
 
 	s3Client := s3.NewFromConfig(cfg)
-	bucketName := "juanes-logs-bucket"
+	bucketName := os.Getenv("S3_BUCKET_NAME")
+	if bucketName == "" {
+		bucketName = "juanes-logs-bucket"
+	}
 
 	// 2. Setup del servidor y canal
 	logQueue := make(chan *pb.LogRequest, 100)
@@ -30,11 +34,21 @@ func main() {
 	go ingestorSrv.RunLogWorker()
 
 	// 3. gRPC Setup
-	lis, _ := net.Listen("tcp", ":50051")
-	grpcServer := grpc.NewServer()
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	// Register interceptor
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(ingestor.AuthInterceptor),
+	)
+
 	pb.RegisterLogServiceServer(grpcServer, ingestorSrv)
 	reflection.Register(grpcServer)
 
-	log.Printf("Servidor en la nube listo en %v", lis.Addr())
-	grpcServer.Serve(lis)
+	log.Printf("Server with Auth initialize on %v", lis.Addr())
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }

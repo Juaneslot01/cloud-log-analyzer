@@ -2,6 +2,11 @@ package ingestor
 
 import (
 	"context"
+	"os"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	pb "github.com/juaneslot01/cloud-log-analyzer/api/proto"
@@ -33,4 +38,21 @@ func (s *Server) SendLog(ctx context.Context, in *pb.LogRequest) (*pb.LogRespons
 		Success: true,
 		Message: "Log encolado correctamente",
 	}, nil
+}
+
+// AuthInterceptor validates the API-KEY from the metadata
+func AuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Unauthenticated, "No metadata")
+	}
+
+	// We read the key from env variables from k8s
+	apiKey := os.Getenv("APP_API_KEY")
+	values := md["api-key"]
+
+	if len(values) == 0 || values[0] != apiKey {
+		return nil, status.Errorf(codes.Unauthenticated, "Invalid API-KEY")
+	}
+	return handler(ctx, req)
 }
